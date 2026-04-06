@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MessageDirection {
+  INCOMING
+  OUTGOING
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  UNKNOWN
+}
+
+model User {
+  id        String    @id @default(cuid())
+  waId      String    @unique
+  name      String?
+  blocked   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  messages  Message[]
+}
+
+model Chat {
+  id            String           @id @default(cuid())
+  waChatId      String           @unique
+  name          String?
+  isGroup       Boolean          @default(false)
+  personaId     String?
+  silenceMode   Boolean          @default(false)
+  cooldownUntil DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  messages      Message[]
+  persona       Persona?         @relation(fields: [personaId], references: [id])
+  snapshots     MemorySnapshot[]
+}
+
+model Message {
+  id          String           @id @default(cuid())
+  waMessageId String           @unique
+  chatId      String
+  userId      String?
+  content     String
+  direction   MessageDirection
+  type        MessageType      @default(TEXT)
+  metadata    Json?
+  createdAt   DateTime         @default(now())
+  chat        Chat             @relation(fields: [chatId], references: [id])
+  user        User?            @relation(fields: [userId], references: [id])
+}
+
+model Persona {
+  id             String   @id @default(cuid())
+  name           String   @unique
+  tone           String
+  aggressiveness Int
+  emojiUsage     Int
+  argumentStyle  String
+  systemPrompt   String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  chats          Chat[]
+}
+
+model AgentConfig {
+  id                    String   @id @default(cuid())
+  enabled               Boolean  @default(true)
+  maxMessagesPerHour    Int      @default(60)
+  minDelayMs            Int      @default(1200)
+  maxDelayMs            Int      @default(6000)
+  antiBanSleepCycleMins Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model MemorySnapshot {
+  id        String   @id @default(cuid())
+  chatId    String
+  summary   String
+  topics    Json?
+  createdAt DateTime @default(now())
+  chat      Chat     @relation(fields: [chatId], references: [id])
+}
